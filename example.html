@@ -105,6 +105,8 @@
       sunny on the Terrace.
     </p>
   </article>
+
+  <script src="pouchdb.js"></script>
   <script src="domannotations.js"></script>
   <script>
 (function () {
@@ -206,16 +208,58 @@
         ann.addTarget(target);
     }
 
+    var db = new PouchDB('highlights');
+    window.db = db;
+
+    function addUUID(ev) {
+      if (undefined != ev.detail.target) {
+        ev.detail.target._id = PouchDB.utils.uuid();
+        console.log(ev.detail);
+      }
+    }
+
+    function makeDoc(target) {
+      var doc = target.toJSON();
+      doc._id = target._id;
+      if (target._rev) {
+        doc._rev = target._rev;
+      }
+      console.log('new doc', doc);
+      return doc;
+    }
+
     function addHighlights(t) {
         t.nodes.forEach(function (n) {
             wrapWithHighlight(n);
         });
+
+        t._id = PouchDB.utils.uuid();
+        var doc = makeDoc(t);
+        db.post(doc)
+          .then(function(resp) {
+            if (resp.ok) {
+              t._rev = resp.rev;
+            }
+            console.log('highlight added', resp);
+          })
+          .catch(function(err) {
+            console.error(err);
+          });
     }
 
     function removeHighlights(t) {
         t.nodes.forEach(function (n) {
             replaceWithChildren(n.parentNode);
         });
+
+        var doc = makeDoc(t);
+        db.remove(doc)
+          .then(function(resp) {
+            console.log('highlight removed, resp);
+          })
+          .catch(function(err) {
+            console.error(err);
+          });
     }
 
     function replaceWithChildren(node) {
